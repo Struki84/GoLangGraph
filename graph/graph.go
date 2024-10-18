@@ -38,7 +38,7 @@ type Edge struct {
 	From string
 
 	// To is the name of the node to which the edge points.
-	To string
+	To func(ctx context.Context, state []llms.MessageContent) string
 }
 
 // MessageGraph represents a message graph.
@@ -72,7 +72,16 @@ func (g *MessageGraph) AddNode(name string, fn func(ctx context.Context, state [
 func (g *MessageGraph) AddEdge(from, to string) {
 	g.edges = append(g.edges, Edge{
 		From: from,
-		To:   to,
+		To: func(ctx context.Context, state []llms.MessageContent) string {
+			return to
+		},
+	})
+}
+
+func (g *MessageGraph) AddConditionalEdge(from string, condition func(ctx context.Context, state []llms.MessageContent) string) {
+	g.edges = append(g.edges, Edge{
+		From: from,
+		To:   condition,
 	})
 }
 
@@ -126,7 +135,7 @@ func (r *Runnable) Invoke(ctx context.Context, messages []llms.MessageContent) (
 		foundNext := false
 		for _, edge := range r.graph.edges {
 			if edge.From == currentNode {
-				currentNode = edge.To
+				currentNode = edge.To(ctx, state)
 				foundNext = true
 				break
 			}
