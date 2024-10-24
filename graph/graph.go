@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
-	"github.com/tmc/langchaingo/llms"
 )
 
 // END is a special constant used to represent the end node in the graph.
@@ -29,7 +27,7 @@ type Node struct {
 
 	// Function is the function associated with the node.
 	// It takes a context and a slice of MessageContent as input and returns a slice of MessageContent and an error.
-	Function func(ctx context.Context, state []llms.MessageContent) ([]llms.MessageContent, error)
+	Function func(ctx context.Context, state map[string]any) (map[string]any, error)
 }
 
 // Edge represents an edge in the message graph.
@@ -38,11 +36,11 @@ type Edge struct {
 	From string
 
 	// To is the name of the node to which the edge points.
-	To func(ctx context.Context, state []llms.MessageContent) string
+	To func(ctx context.Context, state map[string]any) string
 }
 
 // MessageGraph represents a message graph.
-type MessageGraph struct {
+type Graph struct {
 	// nodes is a map of node names to their corresponding Node objects.
 	nodes map[string]Node
 
@@ -54,14 +52,14 @@ type MessageGraph struct {
 }
 
 // NewMessageGraph creates a new instance of MessageGraph.
-func NewMessageGraph() *MessageGraph {
-	return &MessageGraph{
+func New() *Graph {
+	return &Graph{
 		nodes: make(map[string]Node),
 	}
 }
 
 // AddNode adds a new node to the message graph with the given name and function.
-func (g *MessageGraph) AddNode(name string, fn func(ctx context.Context, state []llms.MessageContent) ([]llms.MessageContent, error)) {
+func (g *Graph) AddNode(name string, fn func(ctx context.Context, state map[string]any) (map[string]any, error)) {
 	g.nodes[name] = Node{
 		Name:     name,
 		Function: fn,
@@ -69,16 +67,16 @@ func (g *MessageGraph) AddNode(name string, fn func(ctx context.Context, state [
 }
 
 // AddEdge adds a new edge to the message graph between the "from" and "to" nodes.
-func (g *MessageGraph) AddEdge(from, to string) {
+func (g *Graph) AddEdge(from, to string) {
 	g.edges = append(g.edges, Edge{
 		From: from,
-		To: func(ctx context.Context, state []llms.MessageContent) string {
+		To: func(ctx context.Context, state map[string]any) string {
 			return to
 		},
 	})
 }
 
-func (g *MessageGraph) AddConditionalEdge(from string, condition func(ctx context.Context, state []llms.MessageContent) string) {
+func (g *Graph) AddConditionalEdge(from string, condition func(ctx context.Context, state map[string]any) string) {
 	g.edges = append(g.edges, Edge{
 		From: from,
 		To:   condition,
@@ -86,19 +84,19 @@ func (g *MessageGraph) AddConditionalEdge(from string, condition func(ctx contex
 }
 
 // SetEntryPoint sets the entry point node name for the message graph.
-func (g *MessageGraph) SetEntryPoint(name string) {
+func (g *Graph) SetEntryPoint(name string) {
 	g.entryPoint = name
 }
 
 // Runnable represents a compiled message graph that can be invoked.
 type Runnable struct {
 	// graph is the underlying MessageGraph object.
-	graph *MessageGraph
+	graph *Graph
 }
 
 // Compile compiles the message graph and returns a Runnable instance.
 // It returns an error if the entry point is not set.
-func (g *MessageGraph) Compile() (*Runnable, error) {
+func (g *Graph) Compile() (*Runnable, error) {
 	if g.entryPoint == "" {
 		return nil, ErrEntryPointNotSet
 	}
@@ -112,8 +110,8 @@ func (g *MessageGraph) Compile() (*Runnable, error) {
 // It returns the resulting messages and an error if any occurs during the execution.
 // Invoke executes the compiled message graph with the given input messages.
 // It returns the resulting messages and an error if any occurs during the execution.
-func (r *Runnable) Invoke(ctx context.Context, messages []llms.MessageContent) ([]llms.MessageContent, error) {
-	state := messages
+func (r *Runnable) Invoke(ctx context.Context, initialState map[string]any) (map[string]any, error) {
+	state := initialState
 	currentNode := r.graph.entryPoint
 
 	for {

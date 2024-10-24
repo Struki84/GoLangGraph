@@ -17,7 +17,7 @@ func main() {
 		panic(err)
 	}
 
-	oracleNode := func(ctx context.Context, state []llms.MessageContent) ([]llms.MessageContent, error) {
+	chatNode := func(ctx context.Context, state []llms.MessageContent) ([]llms.MessageContent, error) {
 		reponse, err := model.GenerateContent(ctx, state, llms.WithTemperature(0.7))
 		if err != nil {
 			return nil, err
@@ -30,20 +30,22 @@ func main() {
 
 	workflow := graph.NewMessageGraph()
 
-	workflow.AddNode("oracle", oracleNode)
+	workflow.AddNode("chat", chatNode)
+
 	workflow.AddNode(graph.END, func(ctx context.Context, state []llms.MessageContent) ([]llms.MessageContent, error) {
 		return state, nil
 	})
 
-	workflow.SetEntryPoint("oracle")
-	workflow.AddEdge("oracle", graph.END)
+	workflow.SetEntryPoint("chat")
+	workflow.AddEdge("chat", graph.END)
 
 	runable, err := workflow.Compile()
 	if err != nil {
 		panic(err)
 	}
 
-	intialState := []llms.MessageContent{
+	intialState := make(map[string]any)
+	intialState["messages"] = []llms.MessageContent{
 		llms.TextParts(schema.ChatMessageTypeSystem, "You are a helpful assistant."),
 		llms.TextParts(schema.ChatMessageTypeHuman, "Hello, how are you?"),
 	}
