@@ -7,26 +7,26 @@ import (
 )
 
 const (
-	DefaultStateKey = "messages"
+	DeafaultMessagesKey = "messages"
 )
 
 // MessageGraph represents a message graph.
 type MessageGraph struct {
 	Graph
-	StateKey string
+	MessagesKey string
 }
 
 // NewMessageGraph creates a new instance of MessageGraph.
 func NewMessageGraph(key ...string) *MessageGraph {
 	graph := &MessageGraph{
-		StateKey: DefaultStateKey,
+		MessagesKey: DeafaultMessagesKey,
 		Graph: Graph{
 			nodes: make(map[string]Node),
 		},
 	}
 
 	if len(key) > 0 {
-		graph.StateKey = key[0]
+		graph.MessagesKey = key[0]
 	}
 
 	return graph
@@ -39,7 +39,7 @@ func (g *MessageGraph) AddNode(name string, fn func(ctx context.Context, message
 		Name: name,
 		Function: func(ctx context.Context, state map[string]any) (map[string]any, error) {
 			msgs, err := fn(ctx, state["messages"].([]llms.MessageContent))
-			state[g.StateKey] = msgs
+			state[g.MessagesKey] = msgs
 
 			return state, err
 		},
@@ -60,7 +60,7 @@ func (g *MessageGraph) AddConditionalEdge(from string, condition func(ctx contex
 	g.edges = append(g.edges, Edge{
 		From: from,
 		To: func(ctx context.Context, state map[string]any) string {
-			return condition(ctx, state[g.StateKey].([]llms.MessageContent))
+			return condition(ctx, state[g.MessagesKey].([]llms.MessageContent))
 		},
 	})
 }
