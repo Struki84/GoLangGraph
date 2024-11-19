@@ -48,7 +48,7 @@ func main() {
 		}
 
 		if len(response.Choices[0].ToolCalls) > 0 {
-			log.Printf("Generating %v tool calls", len(response.Choices[0].ToolCalls))
+			// log.Printf("Generating %v tool calls", len(response.Choices[0].ToolCalls))
 			state.ToolCalls = response.Choices[0].ToolCalls
 
 			msg := llms.TextParts(llms.ChatMessageTypeAI, response.Choices[0].Content)
@@ -58,7 +58,7 @@ func main() {
 
 			state.Messages = append(state.Messages, msg)
 
-			log.Printf("agent state: %s", state.Messages)
+			// log.Printf("agent state: %s", state.Messages)
 			return state, nil
 		}
 
@@ -108,7 +108,7 @@ func main() {
 			}
 		}
 
-		log.Printf("search state messages: %v", state.Messages)
+		// log.Printf("search state messages: %v", state.Messages)
 		return state, nil
 	}
 
