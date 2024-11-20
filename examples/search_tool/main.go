@@ -18,9 +18,9 @@ func main() {
 		panic(err)
 	}
 
-	intialState := graph.NewMessagesState([]llms.MessageContent{
+	intialState := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeSystem, "You are an agent that has access to a Duck Duck go search engine. Please provide the user with the information they are looking for by using the search tool provided."),
-	})
+	}
 
 	tools := []llms.Tool{
 		{
@@ -41,37 +41,31 @@ func main() {
 		},
 	}
 
-	agent := func(ctx context.Context, state graph.MessagesState) (graph.MessagesState, error) {
-		response, err := model.GenerateContent(ctx, state.Messages, llms.WithTools(tools))
+	agent := func(ctx context.Context, state []llms.MessageContent) ([]llms.MessageContent, error) {
+		response, err := model.GenerateContent(ctx, state, llms.WithTools(tools))
 		if err != nil {
 			return state, err
 		}
 
-		if len(response.Choices[0].ToolCalls) > 0 {
-			// log.Printf("Generating %v tool calls", len(response.Choices[0].ToolCalls))
-			state.ToolCalls = response.Choices[0].ToolCalls
-
-			msg := llms.TextParts(llms.ChatMessageTypeAI, response.Choices[0].Content)
-			for _, toolCall := range state.ToolCalls {
-				msg.Parts = append(msg.Parts, toolCall)
-			}
-
-			state.Messages = append(state.Messages, msg)
-
-			// log.Printf("agent state: %s", state.Messages)
-			return state, nil
-		}
-
 		msg := llms.TextParts(llms.ChatMessageTypeAI, response.Choices[0].Content)
 
-		state.Messages = append(state.Messages, msg)
+		if len(response.Choices[0].ToolCalls) > 0 {
+			for _, toolCall := range response.Choices[0].ToolCalls {
+				msg.Parts = append(msg.Parts, toolCall)
+			}
+		}
+
+		state = append(state, msg)
 		return state, nil
 	}
 
-	search := func(ctx context.Context, state graph.MessagesState) (graph.MessagesState, error) {
-		for index, toolCall := range state.ToolCalls {
-			if toolCall.FunctionCall.Name == "search" {
+	search := func(ctx context.Context, state []llms.MessageContent) ([]llms.MessageContent, error) {
+		lastMsg := state[len(state)-1]
 
+		for _, part := range lastMsg.Parts {
+			toolCall, ok := part.(llms.ToolCall)
+
+			if ok && toolCall.FunctionCall.Name == "search" {
 				var args struct {
 					Query string `json:"query"`
 				}
@@ -103,18 +97,20 @@ func main() {
 					},
 				}
 
-				state.Messages = append(state.Messages, msg)
-				state.ToolCalls = append(state.ToolCalls[:index], state.ToolCalls[index+1:]...)
+				state = append(state, msg)
 			}
 		}
 
-		// log.Printf("search state messages: %v", state.Messages)
 		return state, nil
 	}
 
-	useSearch := func(ctx context.Context, state graph.MessagesState) string {
-		for _, toolCall := range state.ToolCalls {
-			if toolCall.FunctionCall.Name == "search" {
+	shouldSearch := func(ctx context.Context, state []llms.MessageContent) string {
+		lastMsg := state[len(state)-1]
+		for _, part := range lastMsg.Parts {
+			toolCall, ok := part.(llms.ToolCall)
+
+			if ok && toolCall.FunctionCall.Name == "search" {
+				log.Printf("agent should use search")
 				return "search"
 			}
 		}
@@ -128,7 +124,7 @@ func main() {
 	workflow.AddNode("search", search)
 
 	workflow.SetEntryPoint("agent")
-	workflow.AddConditionalEdge("agent", useSearch)
+	workflow.AddConditionalEdge("agent", shouldSearch)
 	workflow.AddEdge("search", "agent")
 
 	app, err := workflow.Compile()
@@ -137,9 +133,9 @@ func main() {
 		return
 	}
 
-	intialState.Messages = append(
-		intialState.Messages,
-		llms.TextParts(llms.ChatMessageTypeHuman, "Who is the founder of Apple?"),
+	intialState = append(
+		intialState,
+		llms.TextParts(llms.ChatMessageTypeHuman, "Who won the last FIFA World Cup?"),
 	)
 
 	response, err := app.Invoke(context.Background(), intialState)
@@ -148,6 +144,6 @@ func main() {
 		return
 	}
 
-	lastMsg := response.Messages[len(response.Messages)-1]
+	lastMsg := response[len(response)-1]
 	log.Printf("last msg: %v", lastMsg.Parts[0])
 }

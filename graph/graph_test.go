@@ -8,12 +8,11 @@ import (
 
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
-	"github.com/tmc/langchaingo/schema"
 	"github.com/tmc/langgraphgo/graph"
 )
 
 func ExampleMessageGraph() {
-	model, err := openai.New()
+	model, err := openai.New(openai.WithModel("gpt-4o"))
 	if err != nil {
 		panic(err)
 	}
@@ -26,7 +25,7 @@ func ExampleMessageGraph() {
 			return nil, err
 		}
 		return append(state,
-			llms.TextParts(schema.ChatMessageTypeAI, r.Choices[0].Content),
+			llms.TextParts(llms.ChatMessageTypeAI, r.Choices[0].Content),
 		), nil
 	})
 	g.AddNode(graph.END, func(_ context.Context, state []llms.MessageContent) ([]llms.MessageContent, error) {
@@ -44,7 +43,7 @@ func ExampleMessageGraph() {
 	ctx := context.Background()
 	// Let's run it!
 	res, err := runnable.Invoke(ctx, []llms.MessageContent{
-		llms.TextParts(schema.ChatMessageTypeHuman, "What is 1 + 1?"),
+		llms.TextParts(llms.ChatMessageTypeHuman, "What is 1 + 1?"),
 	})
 	if err != nil {
 		panic(err)
@@ -53,7 +52,7 @@ func ExampleMessageGraph() {
 	fmt.Println(res)
 
 	// Output:
-	// [{human [{What is 1 + 1?}]} {ai [{1 + 1 equals 2.}]}]
+	// [{human [What is 1 + 1?]} {ai [1 + 1 equals 2.]}]
 }
 
 func TestMessageGraph(t *testing.T) {
@@ -70,21 +69,21 @@ func TestMessageGraph(t *testing.T) {
 			buildGraph: func() *graph.MessageGraph {
 				g := graph.NewMessageGraph()
 				g.AddNode("node1", func(_ context.Context, state []llms.MessageContent) ([]llms.MessageContent, error) {
-					return append(state, llms.TextParts(schema.ChatMessageTypeAI, "Node 1")), nil
+					return append(state, llms.TextParts(llms.ChatMessageTypeAI, "Node 1")), nil
 				})
 				g.AddNode("node2", func(_ context.Context, state []llms.MessageContent) ([]llms.MessageContent, error) {
-					return append(state, llms.TextParts(schema.ChatMessageTypeAI, "Node 2")), nil
+					return append(state, llms.TextParts(llms.ChatMessageTypeAI, "Node 2")), nil
 				})
 				g.AddEdge("node1", "node2")
 				g.AddEdge("node2", graph.END)
 				g.SetEntryPoint("node1")
 				return g
 			},
-			inputMessages: []llms.MessageContent{llms.TextParts(schema.ChatMessageTypeHuman, "Input")},
+			inputMessages: []llms.MessageContent{llms.TextParts(llms.ChatMessageTypeHuman, "Input")},
 			expectedOutput: []llms.MessageContent{
-				llms.TextParts(schema.ChatMessageTypeHuman, "Input"),
-				llms.TextParts(schema.ChatMessageTypeAI, "Node 1"),
-				llms.TextParts(schema.ChatMessageTypeAI, "Node 2"),
+				llms.TextParts(llms.ChatMessageTypeHuman, "Input"),
+				llms.TextParts(llms.ChatMessageTypeAI, "Node 1"),
+				llms.TextParts(llms.ChatMessageTypeAI, "Node 2"),
 			},
 			expectedError: nil,
 		},
