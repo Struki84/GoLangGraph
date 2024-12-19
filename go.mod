@@ -6,6 +6,8 @@ toolchain go1.22.2
 
 require github.com/tmc/langchaingo v0.1.12
 
+replace github.com/tmc/langchaingo => github.com/Struki84/GoLangChain v0.0.0-20241219194721-954f863c8619
+
 require (
 	github.com/PuerkitoBio/goquery v1.8.1 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
