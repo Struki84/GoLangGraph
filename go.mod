@@ -4,10 +4,7 @@ go 1.22.0
 
 toolchain go1.22.2
 
-require (
-	github.com/tmc/langchaingo v0.1.12
-	github.com/tmc/langgraphgo v0.0.0-20240324234251-3b0caeaffd16
-)
+require github.com/tmc/langchaingo v0.1.12
 
 require (
 	github.com/PuerkitoBio/goquery v1.8.1 // indirect

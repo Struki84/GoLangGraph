@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/struki84/GoLangGraph/graph"
+	"github.com/Struki84/GoLangGraph/graph"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 )
