@@ -1,4 +1,4 @@
-module github.com/tmc/langgraphgo
+module github.com/struki84/golanggraph
 
 go 1.22.0
 
