@@ -41,8 +41,10 @@ func main() {
 		},
 	}
 
-	agent := func(ctx context.Context, state []llms.MessageContent) ([]llms.MessageContent, error) {
-		response, err := model.GenerateContent(ctx, state, llms.WithTools(tools))
+	agent := func(ctx context.Context, state []llms.MessageContent, opts ...graph.GraphOptions) ([]llms.MessageContent, error) {
+		response, err := model.GenerateContent(ctx, state,
+			llms.WithTools(tools),
+		)
 		if err != nil {
 			return state, err
 		}
@@ -59,7 +61,7 @@ func main() {
 		return state, nil
 	}
 
-	search := func(ctx context.Context, state []llms.MessageContent) ([]llms.MessageContent, error) {
+	search := func(ctx context.Context, state []llms.MessageContent, opts ...graph.GraphOptions) ([]llms.MessageContent, error) {
 		lastMsg := state[len(state)-1]
 
 		for _, part := range lastMsg.Parts {

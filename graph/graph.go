@@ -23,13 +23,15 @@ var (
 )
 
 // Node represents a node in the message graph.
+type NodeFunction func(ctx context.Context, state []llms.MessageContent, options ...GraphOptions) ([]llms.MessageContent, error)
+
 type Node struct {
 	// Name is the unique identifier for the node.
 	Name string
 
 	// Function is the function associated with the node.
 	// It takes a context and a slice of MessageContent as input and returns a slice of MessageContent and an error.
-	Function func(ctx context.Context, state []llms.MessageContent) ([]llms.MessageContent, error)
+	Function NodeFunction
 }
 
 // Edge represents an edge in the message graph.
@@ -51,6 +53,8 @@ type MessageGraph struct {
 
 	// entryPoint is the name of the entry point node in the graph.
 	entryPoint string
+
+	streamFunction func(ctx context.Context, chunk []byte) error
 }
 
 // NewMessageGraph creates a new instance of MessageGraph.
@@ -61,7 +65,7 @@ func NewMessageGraph() *MessageGraph {
 }
 
 // AddNode adds a new node to the message graph with the given name and function.
-func (g *MessageGraph) AddNode(name string, fn func(ctx context.Context, state []llms.MessageContent) ([]llms.MessageContent, error)) {
+func (g *MessageGraph) AddNode(name string, fn NodeFunction) {
 	g.nodes[name] = Node{
 		Name:     name,
 		Function: fn,
@@ -114,7 +118,7 @@ func (g *MessageGraph) Compile() (*Runnable, error) {
 // It returns the resulting messages and an error if any occurs during the execution.
 // Invoke executes the compiled message graph with the given input messages.
 // It returns the resulting messages and an error if any occurs during the execution.
-func (r *Runnable) Invoke(ctx context.Context, messages []llms.MessageContent) ([]llms.MessageContent, error) {
+func (r *Runnable) Invoke(ctx context.Context, messages []llms.MessageContent, options ...GraphOptions) ([]llms.MessageContent, error) {
 	state := messages
 	currentNode := r.graph.entryPoint
 
