@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/Struki84/GoLangGraph/graph"
@@ -53,7 +54,7 @@ func main() {
 	)
 
 	streamFunc := func(ctx context.Context, chunk []byte) error {
-		println(string(chunk))
+		fmt.Print(string(chunk))
 		return nil
 	}
 

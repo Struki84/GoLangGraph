@@ -133,7 +133,7 @@ func (r *Runnable) Invoke(ctx context.Context, messages []llms.MessageContent, o
 		}
 
 		var err error
-		state, err = node.Function(ctx, state)
+		state, err = node.Function(ctx, state, options...)
 		if err != nil {
 			return nil, fmt.Errorf("error in node %s: %w", currentNode, err)
 		}
