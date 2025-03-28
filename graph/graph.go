@@ -23,7 +23,7 @@ var (
 )
 
 // Node represents a node in the message graph.
-type NodeFunction func(ctx context.Context, state []llms.MessageContent, options ...GraphOptions) ([]llms.MessageContent, error)
+type NodeFunction func(ctx context.Context, state []llms.MessageContent, options Options) ([]llms.MessageContent, error)
 
 type Node struct {
 	// Name is the unique identifier for the node.
@@ -54,13 +54,20 @@ type MessageGraph struct {
 	// entryPoint is the name of the entry point node in the graph.
 	entryPoint string
 
-	streamFunction func(ctx context.Context, chunk []byte) error
+	options Options
 }
 
 // NewMessageGraph creates a new instance of MessageGraph.
-func NewMessageGraph() *MessageGraph {
+func NewMessageGraph(opts ...GraphOptions) *MessageGraph {
+	options := Options{}
+
+	for _, opt := range opts {
+		opt(&options)
+	}
+
 	return &MessageGraph{
-		nodes: make(map[string]Node),
+		nodes:   make(map[string]Node),
+		options: options,
 	}
 }
 
@@ -132,8 +139,13 @@ func (r *Runnable) Invoke(ctx context.Context, messages []llms.MessageContent, o
 			return nil, fmt.Errorf("%w: %s", ErrNodeNotFound, currentNode)
 		}
 
+		graphOpts := r.graph.options
+		for _, opt := range options {
+			opt(&graphOpts)
+		}
+
 		var err error
-		state, err = node.Function(ctx, state, options...)
+		state, err = node.Function(ctx, state, graphOpts)
 		if err != nil {
 			return nil, fmt.Errorf("error in node %s: %w", currentNode, err)
 		}

@@ -10,6 +10,18 @@ import (
 	"github.com/tmc/langchaingo/llms/openai"
 )
 
+type MyCallback struct {
+	graph.SimpleCallback
+}
+
+func (callback MyCallback) HandleNodeStart(ctx context.Context, node string, initialState []llms.MessageContent) {
+	log.Println("Callback from node:", node)
+}
+
+func (callback MyCallback) HandleNodeStream(ctx context.Context, node string, chunk []byte) {
+	fmt.Print(string(chunk))
+}
+
 func main() {
 
 	model, err := openai.New(openai.WithModel("gpt-4o"))
@@ -23,16 +35,25 @@ func main() {
 
 	agent := func(ctx context.Context, state []llms.MessageContent, opts graph.Options) ([]llms.MessageContent, error) {
 
-		response, err := model.GenerateContent(ctx, state, llms.WithStreamingFunc(opts.StreamHandler))
+		opts.CallbackHandler.HandleNodeStart(ctx, "agent", state)
+
+		response, err := model.GenerateContent(ctx, state,
+			llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
+				opts.CallbackHandler.HandleNodeStream(ctx, "agent", chunk)
+				return nil
+			}),
+		)
 		if err != nil {
-			return nil, err
+			return state, err
 		}
 
 		state = append(state, llms.TextParts(llms.ChatMessageTypeAI, response.Choices[0].Content))
+
+		opts.CallbackHandler.HandleNodeEnd(ctx, "agent", state)
 		return state, nil
 	}
-
-	workflow := graph.NewMessageGraph()
+	callback := MyCallback{}
+	workflow := graph.NewMessageGraph(graph.WithCallback(callback))
 
 	workflow.AddNode("agent", agent)
 	workflow.AddEdge("agent", graph.END)
@@ -49,12 +70,7 @@ func main() {
 		llms.TextParts(llms.ChatMessageTypeAI, "Hello! How are you doing?"),
 	)
 
-	streamFunc := func(ctx context.Context, chunk []byte) error {
-		fmt.Print(string(chunk))
-		return nil
-	}
-
-	_, err = app.Invoke(context.Background(), initialState, graph.WithStreamHandler(streamFunc))
+	_, err = app.Invoke(context.Background(), initialState)
 	if err != nil {
 		log.Println(err)
 		return
