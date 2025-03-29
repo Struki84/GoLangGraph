@@ -106,7 +106,7 @@ func main() {
 		return state, nil
 	}
 
-	shouldSearch := func(ctx context.Context, state []llms.MessageContent) string {
+	shouldSearch := func(ctx context.Context, state []llms.MessageContent, opts graph.Options) string {
 		lastMsg := state[len(state)-1]
 		for _, part := range lastMsg.Parts {
 			toolCall, ok := part.(llms.ToolCall)
